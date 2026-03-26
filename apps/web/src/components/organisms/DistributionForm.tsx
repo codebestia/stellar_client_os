@@ -1,6 +1,7 @@
 'use client';
 
 import React, { memo, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,14 @@ import { RecipientTable } from '@/components/organisms/RecipientTable';
 import { AmountSummary } from '@/components/molecules/AmountSummary';
 import { useDistributionState } from '@/hooks/use-distribution-state';
 import { DistributionState } from '@/types/distribution';
+import {
+  InsufficientFundsError,
+  NetworkError,
+  TransactionError,
+  TransactionTimeoutError,
+  ValidationError,
+  parseError,
+} from '@/services/errors';
 
 interface DistributionFormProps {
   onSubmit: (data: DistributionState) => Promise<void>;
@@ -35,16 +44,35 @@ export const DistributionForm = memo(function DistributionForm({
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validate()) {
+
+    const validationErrors = validate();
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0].message, { duration: 6000 });
       return;
     }
 
     try {
       await onSubmit(state);
+      toast.success('Distribution submitted successfully.', { duration: 4000 });
     } catch (error) {
-      console.error('Distribution submission failed:', error);
-      // TODO: Integrate with existing notification system
+      const parsed = parseError(error);
+      let message: string;
+
+      if (parsed instanceof InsufficientFundsError) {
+        message = 'Insufficient balance to complete this distribution.';
+      } else if (parsed instanceof TransactionTimeoutError) {
+        message = 'Transaction timed out. It may still be processed — check your transaction history.';
+      } else if (parsed instanceof TransactionError) {
+        message = 'Transaction failed. Please check your parameters and try again.';
+      } else if (parsed instanceof NetworkError) {
+        message = 'Unable to reach the network. Please check your connection and try again.';
+      } else if (parsed instanceof ValidationError) {
+        message = parsed.message;
+      } else {
+        message = parsed.message || 'Distribution failed. Please try again.';
+      }
+
+      toast.error(message, { duration: 7000 });
     }
   }, [onSubmit, state, validate]);
 

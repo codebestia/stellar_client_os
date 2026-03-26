@@ -1,6 +1,7 @@
 'use client';
 
 import React, { memo, useCallback, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RecipientRow } from '@/components/molecules/RecipientRow';
@@ -32,11 +33,14 @@ export const RecipientTable = memo(function RecipientTable({
   const handleBulkImport = useCallback((newRecipients: Recipient[]) => {
     onBulkImport(newRecipients);
     setShowUpload(false);
+    toast.success(
+      `${newRecipients.length} recipient${newRecipients.length !== 1 ? 's' : ''} imported successfully.`,
+      { duration: 4000 }
+    );
   }, [onBulkImport]);
 
   const handleUploadError = useCallback((error: string) => {
-    // TODO: Integrate with existing notification system
-    console.error('CSV upload error:', error);
+    toast.error(error, { duration: 7000 });
   }, []);
 
   const toggleUpload = useCallback(() => {
