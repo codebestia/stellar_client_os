@@ -13,6 +13,9 @@ import {
   WalletNetwork,
   allowAllModules,
 } from "@creit.tech/stellar-wallets-kit";
+import { AlertCircle } from "lucide-react";
+
+import { safeGetItem, safeSetItem, safeRemoveItem, isStorageAvailable } from "@/utils/safe-storage";
 
 import { offrampService } from "@/services/offramp.service";
 import { notify } from "@/utils/notification";
@@ -58,6 +61,7 @@ export const StellarWalletProvider = ({
   const [network, setNetworkState] = useState<WalletNetwork>(WalletNetwork.TESTNET);
   const [kit, setKit] = useState<StellarWalletsKit | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPersistenceAvailable, setIsPersistenceAvailable] = useState(true);
 
   // Holds the AbortController for the current in-flight connection attempt.
   // Aborting it signals connect() to discard any resolved address.
@@ -65,6 +69,8 @@ export const StellarWalletProvider = ({
 
   // Initialize kit and handle persistence
   useEffect(() => {
+    setIsPersistenceAvailable(isStorageAvailable());
+
     const walletKit = new StellarWalletsKit({
       network: network,
       modules: allowAllModules(),
@@ -72,9 +78,9 @@ export const StellarWalletProvider = ({
     setKit(walletKit);
 
     // RESTORE SESSION
-    const savedAddress = localStorage.getItem("stellar_wallet_address");
-    const savedWalletId = localStorage.getItem("stellar_wallet_id");
-    const savedNetwork = localStorage.getItem("stellar_wallet_network");
+    const savedAddress = safeGetItem("stellar_wallet_address");
+    const savedWalletId = safeGetItem("stellar_wallet_id");
+    const savedNetwork = safeGetItem("stellar_wallet_network");
 
     if (savedAddress && savedWalletId && savedNetwork === network) {
       setAddress(savedAddress);
@@ -128,14 +134,6 @@ export const StellarWalletProvider = ({
     { id: "lobstr", name: "Lobstr", icon: "/icons/lobstr.png" },
   ];
 
-<<<<<<< utilityyy
-  const connect = useCallback(
-    async (walletId: WalletId) => {
-      if (!kit) {
-        console.error("Wallet kit not initialized");
-        return;
-      }
-=======
   const WALLET_INSTALL_URL: Partial<Record<WalletId, string>> = {
     freighter: "https://freighter.app/",
     xbull: "https://xbull.app/",
@@ -153,7 +151,6 @@ export const StellarWalletProvider = ({
     try {
       console.log(`Attempting to connect to ${walletId}...`);
       kit.setWallet(walletId);
->>>>>>> main
 
       // Abort any previous in-flight attempt before starting a new one
       if (connectionAbortRef.current) {
@@ -166,16 +163,11 @@ export const StellarWalletProvider = ({
 
       setConnectionStatus("connecting");
 
-<<<<<<< utilityyy
-      try {
-        console.log(`Attempting to connect to ${walletId}...`);
-        kit.setWallet(walletId);
-=======
       setAddress(address);
       setSelectedWalletId(walletId);
-      localStorage.setItem("stellar_wallet_address", address);
-      localStorage.setItem("stellar_wallet_id", walletId);
-      localStorage.setItem("stellar_wallet_network", network);
+      safeSetItem("stellar_wallet_address", address);
+      safeSetItem("stellar_wallet_id", walletId);
+      safeSetItem("stellar_wallet_network", network as string);
       setIsModalOpen(false);
 
       // Sync with backend on new connection
@@ -220,7 +212,6 @@ export const StellarWalletProvider = ({
         // Show a generic but helpful error for other errors
         notify.error(`Failed to connect to ${walletId}: ${errorMessage}`);
       }
->>>>>>> main
 
         // Await the potentially long-running wallet handshake
         const response = await kit.getAddress();
@@ -327,6 +318,12 @@ export const StellarWalletProvider = ({
       }}
     >
       {children}
+      {!isPersistenceAvailable && (
+        <div className="fixed bottom-4 right-4 z-50 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs rounded-md shadow-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          <span>Private browsing mode: Wallet connection will not be saved.</span>
+        </div>
+      )}
     </WalletContext.Provider>
   );
 };
